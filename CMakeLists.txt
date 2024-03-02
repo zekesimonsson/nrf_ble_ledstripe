@@ -6,7 +6,7 @@
 cmake_minimum_required(VERSION 3.20.0)
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
-project(ble_ledstripe)
+project(NONE)
 
 # NORDIC SDK APP START
 target_sources(app PRIVATE
@@ -16,11 +16,6 @@ target_sources(app PRIVATE
 # Include UART ASYNC API adapter
 target_sources_ifdef(CONFIG_BT_NUS_UART_ASYNC_ADAPTER app PRIVATE
   src/uart_async_adapter.c
-)
-
-# Include neopixel
-target_sources_ifdef(CONFIG_LED_STRIP app PRIVATE
-  src/neopixel_ifc.c
 )
 
 # NORDIC SDK APP END
