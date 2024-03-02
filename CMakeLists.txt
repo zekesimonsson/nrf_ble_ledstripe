@@ -11,6 +11,7 @@ project(NONE)
 # NORDIC SDK APP START
 target_sources(app PRIVATE
   src/main.c
+  src/neopixel_ifc.c
 )
 
 # Include UART ASYNC API adapter

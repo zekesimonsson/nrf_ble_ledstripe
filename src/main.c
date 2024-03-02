@@ -8,6 +8,7 @@
  *  @brief Nordic UART Bridge Service (NUS) sample
  */
 #include "uart_async_adapter.h"
+#include "neopixel_ifc.h"
 
 #include <zephyr/types.h>
 #include <zephyr/kernel.h>
@@ -105,12 +106,12 @@ static void uart_cb(const struct device *dev, struct uart_event *evt, void *user
 
 		if (aborted_buf) {
 			buf = CONTAINER_OF(aborted_buf, struct uart_data_t,
-					   data[0]);
+					   data);
 			aborted_buf = NULL;
 			aborted_len = 0;
 		} else {
 			buf = CONTAINER_OF(evt->data.tx.buf, struct uart_data_t,
-					   data[0]);
+					   data);
 		}
 
 		k_free(buf);
@@ -128,7 +129,7 @@ static void uart_cb(const struct device *dev, struct uart_event *evt, void *user
 
 	case UART_RX_RDY:
 		LOG_DBG("UART_RX_RDY");
-		buf = CONTAINER_OF(evt->data.rx.buf, struct uart_data_t, data[0]);
+		buf = CONTAINER_OF(evt->data.rx.buf, struct uart_data_t, data);
 		buf->len += evt->data.rx.len;
 
 		if (disable_req) {
@@ -176,7 +177,7 @@ static void uart_cb(const struct device *dev, struct uart_event *evt, void *user
 	case UART_RX_BUF_RELEASED:
 		LOG_DBG("UART_RX_BUF_RELEASED");
 		buf = CONTAINER_OF(evt->data.rx_buf.buf, struct uart_data_t,
-				   data[0]);
+				   data);
 
 		if (buf->len > 0) {
 			k_fifo_put(&fifo_uart_rx_data, buf);
@@ -193,7 +194,7 @@ static void uart_cb(const struct device *dev, struct uart_event *evt, void *user
 		}
 
 		aborted_len += evt->data.tx.len;
-		buf = CONTAINER_OF((void *)aborted_buf, struct uart_data_t,
+		buf = CONTAINER_OF(aborted_buf, struct uart_data_t,
 				   data);
 
 		uart_tx(uart, &buf->data[aborted_len],
@@ -322,7 +323,7 @@ static int uart_init(void)
 		return err;
 	}
 
-	err = uart_rx_enable(uart, rx->data, sizeof(rx->data), UART_WAIT_FOR_RX);
+	err = uart_rx_enable(uart, rx->data, sizeof(rx->data), 50);
 	if (err) {
 		LOG_ERR("Cannot enable uart reception (err: %d)", err);
 		/* Free the rx buffer only because the tx buffer will be handled in the callback */
@@ -505,6 +506,18 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data,
 		if (err) {
 			k_fifo_put(&fifo_uart_tx_data, tx);
 		}
+        if( tx->data[0] == 0x00 ) {
+            neopixel_write_semcon_logo();
+        }
+        else if( tx->data[0] < 0x10 ) {
+            neopixel_set_repetitions(tx->data[0]);
+        }
+        else if( tx->data[0] < 0x20 ) {
+            neopixel_set_color(tx->data[0] - 0x10);
+        }
+        else {
+            neopixel_display_write_string(tx->data, tx->len);
+        }
 	}
 }
 
@@ -621,6 +634,7 @@ int main(void)
 		LOG_ERR("Advertising failed to start (err %d)", err);
 		return 0;
 	}
+//    neopixel_display_write_string();
 
 	for (;;) {
 		dk_set_led(RUN_STATUS_LED, (++blink_status) % 2);
